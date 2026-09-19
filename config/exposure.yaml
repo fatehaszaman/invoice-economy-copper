@@ -1,0 +1,55 @@
+# Pre-registered exposure classification. Committed with PREREGISTRATION.md,
+# BEFORE any estimation code. Loaded from here; never hardcoded in analysis.
+version: 1
+primary_measure: continuous     # tiers are a coarsened robustness check
+
+channels:
+  - id: scrap_domestic__multi_intermediary
+    material_form: scrap_domestic
+    intermediation_depth: multi_intermediary
+    exposure: 0.95
+    tier: high
+    basis: "reverse invoicing dependence; CNY 5m individual seller cap; scrap invoice cost ~7%->10% H1 2026"
+    confidence: high
+  - id: scrap_domestic__single_intermediary
+    material_form: scrap_domestic
+    intermediation_depth: single_intermediary
+    exposure: 0.75
+    tier: high
+    basis: "same instruments, shorter ownership chain"
+    confidence: moderate
+  - id: cathode__multi_intermediary
+    material_form: cathode
+    intermediation_depth: multi_intermediary
+    exposure: 0.55
+    tier: moderate
+    basis: "invoice quota limits reported binding on trading firms"
+    confidence: moderate
+  - id: scrap_imported__single_intermediary
+    material_form: scrap_imported
+    intermediation_depth: single_intermediary
+    exposure: 0.45
+    tier: moderate
+    basis: "customs documentation substitutes for some domestic invoicing"
+    confidence: low
+  - id: cathode__single_intermediary
+    material_form: cathode
+    intermediation_depth: single_intermediary
+    exposure: 0.35
+    tier: moderate
+    basis: "quota constraints reported but less binding"
+    confidence: moderate
+  - id: cathode__direct_smelter
+    material_form: cathode
+    intermediation_depth: direct_smelter
+    exposure: 0.10
+    tier: low
+    basis: "buyers observably shifted toward direct smelter procurement"
+    confidence: high
+  - id: rod__direct_smelter
+    material_form: rod
+    intermediation_depth: direct_smelter
+    exposure: 0.10
+    tier: low
+    basis: "minimal intermediation"
+    confidence: moderate

@@ -1,0 +1,28 @@
+# Event reference points. April 24 is NOT treated as an instantaneous intervention.
+version: 1
+
+event_window:
+  t_A:
+    date: 2026-04-13
+    label: "onset of observable enforcement inspections"
+    basis: "S&P Global reports strict compliance inspections already occurring mid-April"
+    url: "https://www.spglobal.com/energy/en/news-research/latest-news/metals/043026-china-tax-compliance-push-tightens-invoice-quotas-slows-copper-cargo-flow"
+  t_B:
+    date: 2026-04-24
+    label: "formal national guidance"
+    basis: "STA Positive and Negative List for Taxpayer Compliance Invoicing, 44 provisions"
+    url: "https://finance.people.com.cn"
+  pre_window_days: 180
+  post_window_days: 120
+
+# Pre-registered placebo dates: chosen as same-weekday anchors in prior years,
+# deliberately fixed before estimation.
+placebo_dates:
+  - 2025-04-24
+  - 2025-10-24
+  - 2024-04-24
+  - 2026-01-24
+
+negative_control_metals:
+  - aluminium
+  - lead

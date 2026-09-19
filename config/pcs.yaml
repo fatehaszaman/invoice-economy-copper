@@ -1,0 +1,100 @@
+# PCS instrument definition. Frozen before estimation; hashed into pcs.lock.
+# Any change after the PREREGISTRATION.md commit will fail `make estimate`.
+
+version: 1
+sign_convention: "PCS = mean_z(physical) - mean_z(commercial); negative = commercial ahead of physical"
+
+standardisation:
+  method: rolling_zscore
+  window: 252
+  prior_vintage_only: true
+  must_not_overlap_event: true
+
+aggregation:
+  weights: equal          # baseline. no optimisation.
+  impute_missing: false   # hard requirement
+  coverage_floor: 0.60
+
+sensitivity_variants:
+  - equal
+  - inverse_variance
+  - leave_one_out
+  - residual
+
+blocks:
+  physical:
+    - id: cable_wire_output
+      transform: log_diff
+      source: nbs
+      frequency: monthly
+    - id: semis_production
+      transform: log_diff
+      source: nbs
+      frequency: monthly
+    - id: refined_production
+      transform: log_diff
+      source: nbs
+      frequency: monthly
+    - id: net_refined_imports
+      transform: log_diff
+      source: gacc
+      frequency: monthly
+    - id: inventory_withdrawals
+      transform: diff
+      source: shfe
+      frequency: weekly
+    - id: scrap_utilisation
+      transform: log_diff
+      source: derived
+      frequency: monthly
+      constructed: true     # carries measurement uncertainty -> MC propagation
+
+  commercial:
+    - id: volume_oi_churn
+      transform: log_diff
+      source: shfe
+      frequency: daily
+    - id: warrant_churn
+      transform: log_diff
+      source: shfe
+      frequency: weekly
+    - id: deliveries_vs_warrant_change
+      transform: level
+      source: shfe
+      frequency: weekly
+    - id: ownership_transfer_proxy
+      transform: log_diff
+      source: derived
+      frequency: weekly
+      constructed: true
+    - id: trader_activity_proxy
+      transform: log_diff
+      source: derived
+      frequency: weekly
+      constructed: true
+
+  # HELD OUT of PCS. Tested as a consequence, never as an input.
+  market_confirmation:
+    held_out_of_pcs: true
+    reason: "A physical premium can reflect genuine scarcity. Using premiums to build the predictor and then explaining premiums with it would be circular."
+    series:
+      - id: yangshan_premium
+        transform: diff
+        source: premiums
+        frequency: daily
+      - id: shanghai_spot_premium
+        transform: diff
+        source: premiums
+        frequency: daily
+      - id: shfe_lme_arb_state
+        transform: level
+        source: compute
+        frequency: daily
+      - id: nearby_spread
+        transform: diff
+        source: compute
+        frequency: daily
+      - id: curve_structure
+        transform: level
+        source: compute
+        frequency: daily
