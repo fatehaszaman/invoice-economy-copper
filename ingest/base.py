@@ -9,7 +9,7 @@ import hashlib
 import json
 import time
 from abc import ABC, abstractmethod
-from datetime import date, datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 ARCHIVE = Path(__file__).resolve().parent / "archive"
@@ -46,7 +46,7 @@ class Fetcher(ABC):
                     {
                         "source": self.source,
                         "url": url,
-                        "retrieved_at": datetime.now(timezone.utc).isoformat(
+                        "retrieved_at": datetime.now(UTC).isoformat(
                             timespec="seconds"
                         ),
                         "bytes": len(payload),

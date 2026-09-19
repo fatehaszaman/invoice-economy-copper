@@ -8,7 +8,7 @@ from datetime import date
 
 import pytest
 
-from warehouse.pit import LookAheadError, Observation, PITStore
+from warehouse.pit import Observation, PITStore
 
 
 def _obs(series, obs_ts, pub_ts, value, rev=0):

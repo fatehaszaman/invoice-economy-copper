@@ -5,7 +5,7 @@
     "config/exposure.yaml": "2951e341312b900054f0197c543b06881e191b567c961ba8cc365e9e300e8483",
     "config/pcs.yaml": "36d6c41c77a83e51b0b9b4257e17d4fa17189024f44febbb7461329538fc0d95"
   },
-  "locked_at": "2026-09-19T03:27:30+00:00",
+  "locked_at": "2026-09-19T03:28:33+00:00",
   "prereg_commit": "643854febf2e52dd3f2ef6f1f7d6135f20cb8da5",
   "version": 1
 }

@@ -18,7 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -63,7 +63,7 @@ def fingerprint() -> dict:
         "version": 1,
         "files": files,
         "prereg_commit": prereg_commit[-1] if prereg_commit else None,
-        "locked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "locked_at": datetime.now(UTC).isoformat(timespec="seconds"),
     }
 
 

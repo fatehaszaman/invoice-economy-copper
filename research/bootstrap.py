@@ -28,7 +28,6 @@ def block_bootstrap_beta(
     for _ in range(n_boot):
         chosen = rng.choice(starts, size=n_blocks, replace=True)
         picks = [periods[s : s + block_len] for s in chosen]
-        sel = np.concatenate(picks)
         # Relabel periods so repeated blocks are distinct fixed effects
         frames = []
         for k, blk in enumerate(picks):

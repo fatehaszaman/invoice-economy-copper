@@ -29,7 +29,7 @@ def permutation_test(
     null = []
     for _ in range(n_perm):
         shuffled = rng.permutation(exposures)
-        mapping = dict(zip(channels, shuffled))
+        mapping = dict(zip(channels, shuffled, strict=True))
         p = panel.copy()
         p["exposure"] = p["channel"].map(mapping)
         try:

@@ -5,7 +5,7 @@ it as such rather than reporting a bare number.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 
 COVERAGE_FLOOR_DEFAULT = 0.60
 

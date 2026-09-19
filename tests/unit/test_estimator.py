@@ -7,7 +7,6 @@ Two directions matter equally:
 Most projects test only the first. The second is what stops a pipeline from
 manufacturing a result.
 """
-import numpy as np
 import pytest
 
 from research.bootstrap import block_bootstrap_beta, percentile_ci
