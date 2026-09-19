@@ -16,8 +16,7 @@ lint:  ## style and type checks
 	$(PY) -m mypy pcs research warehouse --ignore-missing-imports || true
 
 ingest:  ## fetch + archive raw payloads (idempotent, resumable)
-	@echo "NOT YET IMPLEMENTED: live source fetchers. ingest/base.py defines the contract."
-	@exit 1
+	$(PY) -m scripts.run_ingest
 
 canonical:  ## units, calendars, identifier resolution
 	@echo "canonical layer: see canonical/"
@@ -36,8 +35,7 @@ lock:  ## freeze the PCS instrument definition -> pcs.lock
 	$(PY) -m pcs.lock
 
 pcs: lock  ## build the score with coverage metadata and sensitivity band
-	@echo "NOT YET IMPLEMENTED: needs live ingestion. Construction is tested in tests/unit/test_pcs.py."
-	@exit 1
+	$(PY) -m scripts.run_realtime
 
 # The pre-registration guarantee is a BUILD DEPENDENCY, not a promise.
 # This target refuses to run if the instrument definition drifted after
@@ -47,12 +45,15 @@ estimate:  ## exposure design, monotonicity, inference (synthetic until ingestio
 	$(PY) -m scripts.run_research
 
 robustness:  ## pre-trends, placebos, confounder ladder, spec grid
-	@echo "PARTIAL: pre-trends implemented (research/pretrends.py). Placebos and confounder ladder pending ingestion."
+	@echo "Structural modules implemented: research/placebos.py, research/confounders.py, pcs/sensitivity.py."
+	@echo "Validated against the synthetic panel (tests/unit/test_placebos.py, test_confounders.py, test_sensitivity.py)."
+	@echo "Cannot run on real copper data yet: no public source publishes a per-channel,"
+	@echo "invoice-exposure-tiered outcome panel at the intermediary granularity this design needs."
+	@echo "See README \"Live ingestion status\" and \"Open research gap\"."
 	@exit 1
 
 realtime:  ## PIT-constrained PCS + incremental information test
-	@echo "NOT YET IMPLEMENTED: needs live ingestion."
-	@exit 1
+	$(PY) -m scripts.run_realtime
 
 report:  ## regenerate every figure and table in FINDINGS.md
 	@echo "NOT YET IMPLEMENTED: FINDINGS.md does not exist and will not until the analysis runs."
