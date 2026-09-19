@@ -44,7 +44,9 @@ That episode is not the contribution. It is the test environment: a case where t
 | Component | State |
 |---|---|
 | Point-in-time store with as-of resolution | implemented, tested |
-| PCS construction, coverage, sensitivity | implemented, tested |
+| Snowflake DDL for the vintage tables | not yet written |
+| PCS construction and coverage metadata | implemented, tested |
+| PCS sensitivity band across weighting and coverage-floor grids | not yet written |
 | Exposure-intensity estimator, monotonicity, bootstrap, permutation, pre-trends | implemented, tested |
 | Pre-registration lock mechanism | implemented, tested |
 | Four-flow ontology | implemented |
@@ -86,15 +88,18 @@ Where licensed LME history is unavailable, `make all` runs in documented SHFE-on
 
 ```
 config/          declared choices: series, exposure, PCS blocks, event dates
-ingest/          fetchers with immutable content-addressed raw archival
+ingest/          fetcher contract with immutable content-addressed raw archival
 ontology/        Prolog — four flow types, stock states, transition validity
-warehouse/       point-in-time store (sqlite reference impl + Snowflake DDL)
-compute/         Java — curves, VAT-adjusted wedge, turnover proxies
-pcs/             the instrument: transform, standardise, blocks, score, lock
+warehouse/       point-in-time store (sqlite reference impl)
+pcs/             the instrument: transform, standardise, blocks, coverage, score, lock
 research/        exposure design, monotonicity, bootstrap, permutation, pre-trends
-simulate/        real-time observability and measurement uncertainty — NOT the causal test
-monitor/         freshness, coverage, revisions, schema
 tests/           invariants, including the three that matter most
+
+planned, not yet present — listed so the gap is visible rather than implied:
+canonical/       units, calendars, identifier resolution
+compute/         Java — curves, VAT-adjusted wedge, turnover proxies
+simulate/        real-time observability and measurement uncertainty — NOT the causal test
+monitor/         freshness, coverage, revisions, schema drift
 ```
 
 ## Method, in one paragraph
