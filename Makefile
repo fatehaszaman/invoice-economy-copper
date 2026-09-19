@@ -1,0 +1,69 @@
+.PHONY: help install test lint ingest canonical ontology warehouse compute lock pcs estimate robustness realtime report determinism all clean
+
+PY := python
+
+help:
+	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+
+install:  ## install dependencies
+	$(PY) -m pip install -e ".[dev]"
+
+test:  ## full test suite
+	$(PY) -m pytest tests -q
+
+lint:  ## style and type checks
+	$(PY) -m ruff check . || true
+	$(PY) -m mypy pcs research warehouse --ignore-missing-imports || true
+
+ingest:  ## fetch + archive raw payloads (idempotent, resumable)
+	@echo "NOT YET IMPLEMENTED: live source fetchers. ingest/base.py defines the contract."
+	@exit 1
+
+canonical:  ## units, calendars, identifier resolution
+	@echo "canonical layer: see canonical/"
+
+ontology:  ## classify + validate; non-zero exit on violations
+	@command -v swipl >/dev/null 2>&1 || { echo "swipl not installed; skipping ontology validation"; exit 0; }
+	swipl -g "consult('ontology/flows.pl'), consult('ontology/inventory.pl'), halt."
+
+warehouse:  ## vintages, as-of views, exposure panel, coverage
+	@echo "warehouse: sqlite reference impl in warehouse/pit.py; Snowflake DDL in warehouse/*.sql"
+
+compute:  ## Java curves, VAT-adjusted wedge, turnover proxies
+	@echo "compute: see compute/"
+
+lock:  ## freeze the PCS instrument definition -> pcs.lock
+	$(PY) -m pcs.lock
+
+pcs: lock  ## build the score with coverage metadata and sensitivity band
+	@echo "NOT YET IMPLEMENTED: needs live ingestion. Construction is tested in tests/unit/test_pcs.py."
+	@exit 1
+
+# The pre-registration guarantee is a BUILD DEPENDENCY, not a promise.
+# This target refuses to run if the instrument definition drifted after
+# PREREGISTRATION.md was committed.
+estimate:  ## exposure design, monotonicity, inference (synthetic until ingestion lands)
+	@$(PY) -c "from pcs.lock import verify_lock; verify_lock(); print('lock verified: instrument unchanged since pre-registration')"
+	$(PY) -m scripts.run_research
+
+robustness:  ## pre-trends, placebos, confounder ladder, spec grid
+	@echo "PARTIAL: pre-trends implemented (research/pretrends.py). Placebos and confounder ladder pending ingestion."
+	@exit 1
+
+realtime:  ## PIT-constrained PCS + incremental information test
+	@echo "NOT YET IMPLEMENTED: needs live ingestion."
+	@exit 1
+
+report:  ## regenerate every figure and table in FINDINGS.md
+	@echo "NOT YET IMPLEMENTED: FINDINGS.md does not exist and will not until the analysis runs."
+	@exit 1
+
+determinism:  ## run twice, diff outputs, fail on drift
+	bash scripts/check_determinism.sh
+
+all: test ontology lock estimate  ## everything currently implemented, end to end
+	@echo "Implemented stages complete. Live ingestion, PCS build on real data, and the report are pending."
+
+clean:
+	rm -rf build dist *.egg-info .pytest_cache out
+	find . -name __pycache__ -type d -exec rm -rf {} +
