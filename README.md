@@ -19,6 +19,34 @@ For a step-by-step code-reading guide, start with the
 [pseudocode cards](docs/PSEUDOCODE.md). Each card gives the purpose, inputs,
 outputs, time/space bounds, implementation link and an edge case.
 
+## Why this project
+
+I chose copper because my work around copper, aluminium and cable manufacturing
+made the distinction between material consumption and transaction activity a
+concrete research question. This project asks whether independently acquired
+data can help examine that distinction without using employer information or
+treating an economic hypothesis as an established result.
+
+The engineering goal is to make the evidence behind a calculation inspectable.
+A plausible-looking score is not enough if its inputs include later revisions,
+missing trade legs treated as zero, or daily and monthly observations combined
+without an explicit aggregation policy. The pipeline therefore separates
+economic reference dates from information availability, retains data vintages,
+preserves raw payloads by content hash, standardizes against prior observations,
+and reports missingness and coverage alongside the score.
+
+The result is a concrete demonstration of Python/SQL research engineering:
+source adapters, data contracts, revision-aware queries, reproducible synthetic
+examples and tests that exercise failure cases. Those design concerns extend
+beyond copper to other datasets with release delays, revisions and incomplete
+coverage. The deliverable is auditable research infrastructure, not a claimed
+trading edge or completed causal study.
+
+The archive uses SHA-256 hashing to check byte integrity, not encryption or
+decryption. A matching hash does not authenticate a publisher or prove that a
+value was historically available; those limits are documented in the
+[security scope](SECURITY.md) and [pseudocode cards](docs/PSEUDOCODE.md).
+
 ## What is implemented
 
 | Component | Evidence | Boundary |
