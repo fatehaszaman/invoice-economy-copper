@@ -15,6 +15,10 @@ or run `make demo` after installation. It exercises revision timing, missing
 trade legs, read-only SQL access and detection of a changed raw file using
 synthetic fixtures and the actual project functions.
 
+For a step-by-step code-reading guide, start with the
+[pseudocode cards](docs/PSEUDOCODE.md). Each card gives the purpose, inputs,
+outputs, time/space bounds, implementation link and an edge case.
+
 ## What is implemented
 
 | Component | Evidence | Boundary |
@@ -147,6 +151,8 @@ offline quickstart.
 
 ## Technical documentation
 
+- **[Pseudocode cards](docs/PSEUDOCODE.md):** comment-first algorithm walkthroughs
+  with complexity notes and concrete edge cases.
 - **[Offline evidence walkthrough](docs/DEMO.md):** reproducible synthetic
   examples and checked-in output, including deliberate failure cases.
 - **[Research context and methodology](docs/RESEARCH_CONTEXT.md):** source-access

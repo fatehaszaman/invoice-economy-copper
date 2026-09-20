@@ -4,6 +4,10 @@ This document describes the implemented descriptive data path and its research
 boundaries. Pseudocode is explanatory, not a second implementation or a claim
 that the unresolved empirical study has been completed.
 
+For a shorter, comment-first reading path with inputs, outputs, complexity
+notes and worked edge cases, start with [Pseudocode cards](PSEUDOCODE.md).
+This document remains the fuller integration and data-contract reference.
+
 ## System boundary
 
 ```text
