@@ -1,4 +1,4 @@
-.PHONY: help install test lint ingest canonical ontology warehouse compute lock pcs estimate robustness realtime monthly report determinism all clean security audit
+.PHONY: help install test lint ingest canonical ontology warehouse compute lock pcs estimate robustness realtime monthly report determinism all clean security audit demo demo-check
 
 PY := python
 
@@ -10,6 +10,12 @@ install:  ## install dependencies
 
 test:  ## full test suite
 	$(PY) -m pytest tests -q
+
+demo:  ## offline synthetic walkthrough of vintage, missingness and integrity safeguards
+	$(PY) -m scripts.run_demo
+
+demo-check:  ## fail if the offline walkthrough differs from its documented output
+	$(PY) -m scripts.run_demo --check docs/DEMO.md
 
 lint:  ## style and type checks
 	$(PY) -m ruff check .

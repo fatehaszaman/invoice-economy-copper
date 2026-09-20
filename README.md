@@ -10,6 +10,11 @@ infrastructure with partial real-source data and a separate synthetic estimator
 demonstration. It is not a validated trading signal, a causal finding or a
 production system.
 
+For a concrete example, read the [offline evidence walkthrough](docs/DEMO.md)
+or run `make demo` after installation. It exercises revision timing, missing
+trade legs, read-only SQL access and detection of a changed raw file using
+synthetic fixtures and the actual project functions.
+
 ## What is implemented
 
 | Component | Evidence | Boundary |
@@ -49,6 +54,8 @@ cd invoice-economy-copper
 python3 -m venv .venv
 source .venv/bin/activate
 make install
+make demo
+make demo-check
 make test
 make lint
 make estimate
@@ -63,8 +70,9 @@ regression assertions. `make determinism` compares two fixed-seed synthetic runs
 Do not regenerate `pcs.lock` as an installation or routine execution step.
 
 The [CI workflow](.github/workflows/ci.yml) runs tests, lint/type checks, lock
-verification, determinism and repository hygiene. These checks validate selected
-software behaviors, not economic identification or live-source completeness.
+verification, the demo-output comparison, determinism and repository hygiene.
+These checks validate selected software behaviors, not economic identification
+or live-source completeness.
 
 ## Research question and score interpretation
 
@@ -139,6 +147,8 @@ offline quickstart.
 
 ## Technical documentation
 
+- **[Offline evidence walkthrough](docs/DEMO.md):** reproducible synthetic
+  examples and checked-in output, including deliberate failure cases.
 - **[Research context and methodology](docs/RESEARCH_CONTEXT.md):** source-access
   history, provisional aggregation rules, corrections and proposed study design.
 - **[Warehouse model and SQL guide](docs/DATA_MODEL.md):** observation grain,

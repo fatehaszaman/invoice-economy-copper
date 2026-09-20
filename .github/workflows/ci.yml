@@ -25,6 +25,8 @@ jobs:
         run: make lint
       - name: tests
         run: make test
+      - name: reproducible reviewer walkthrough
+        run: make demo-check
       - name: tracked-file security hygiene
         run: make security
       - name: verify original specification lock

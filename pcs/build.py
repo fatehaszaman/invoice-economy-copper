@@ -104,10 +104,10 @@ def net_refined_imports(store: PITStore, asof: date) -> pd.Series:
     """China refined-copper net imports = imports + exports, where exports
     are already stored negative-signed (see `ingest/comtrade.py`).
 
-    This is this build's UN Comtrade proxy for the pre-registered
-    GACC-sourced `net_refined_imports` series. It is real customs data, but
-    the free tier is stale beyond 2024-12 — see `ingest/comtrade.py` module
-    docstring before using this for anything covering the 2026 event window.
+    Live ingestion uses UN Comtrade HS 7403, a broad proxy including alloys,
+    for the originally GACC-sourced input. The archived/default-request range
+    ends at 2024-12; this does not establish a provider-wide access cap.
+    See `ingest/comtrade.py` before interpreting it in the 2026 event window.
     """
     m = _native_series(store, "refined_copper_trade_m", asof)
     x = _native_series(store, "refined_copper_trade_x", asof)
