@@ -10,3 +10,12 @@ ingest/archive/*.bin
 ingest/archive/*.meta.json
 *.db
 .venv/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.sqlite
+*.sqlite3
+*-wal
+*-shm

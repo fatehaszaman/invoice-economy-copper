@@ -44,7 +44,8 @@ That episode motivates a proposed test environment, not established ground truth
 | Component | State |
 |---|---|
 | Vintage store with as-of resolution | implemented, tested; unknown Comtrade release times use conservative retrieval bounds, not reconstructed historical vintages |
-| Snowflake DDL for the vintage tables | not yet written |
+| Local warehouse SQL audit toolkit | implemented: inventory, shared as-of query, revision windows and duplicate-key checks; no cloud warehouse deployment |
+| Evidence security checks | read-only audit, optional raw-byte hash verification, narrow Git-index secret/file checks; not a security certification |
 | PCS construction and coverage metadata | implemented, tested |
 | PCS sensitivity diagnostics | equal, inverse-variance and leave-one-out implemented; residual **disabled/not specified** because the previous formula duplicated the baseline |
 | Exposure-intensity estimator, monotonicity, bootstrap, permutation, pre-trends | implemented, tested |
@@ -116,6 +117,24 @@ cat pcs.lock
 **The null case is tested.** `test_null_case_does_not_manufacture_significance` generates data with zero planted effect and asserts the pipeline declines to find one. Most projects test that a method detects an effect; testing that it refuses to invent one is what stops a pipeline from producing a result regardless of the data.
 
 **Cross-source disagreement is flagged, never auto-corrected.** Conventional data-engineering instinct is wrong here: a pipeline that quietly reconciles sources to agree would erase the thing being measured.
+
+## Database model and evidence protection
+
+The [warehouse model and SQL guide](docs/DATA_MODEL.md) documents the actual
+single-table SQLite schema, an ER diagram with external file/config relationships,
+and executable SQL reports. The [security scope](SECURITY.md) describes read-only
+audits, parameter binding, raw-payload integrity checks and Git-index hygiene.
+These features protect and inspect evidence; they do not solve missing input
+coverage, authenticate historical vintages or validate the research hypothesis.
+
+```bash
+make security
+make audit ARGS="--db warehouse/data/pit_store.db --asof 2026-09-20 --series volume_oi_churn --series refined_copper_trade_m --series refined_copper_trade_x --series cable_wire_output --archive ingest/archive"
+```
+
+The audit requires an existing database. Explicitly list expected raw series so
+absent inputs stay visible; the report does not infer PCS coverage. Review audit
+outputs before sharing because revision history can contain licensed values.
 
 ## Reproduction
 

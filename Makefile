@@ -1,4 +1,4 @@
-.PHONY: help install test lint ingest canonical ontology warehouse compute lock pcs estimate robustness realtime monthly report determinism all clean
+.PHONY: help install test lint ingest canonical ontology warehouse compute lock pcs estimate robustness realtime monthly report determinism all clean security audit
 
 PY := python
 
@@ -25,8 +25,14 @@ ontology:  ## classify + validate; non-zero exit on violations
 	@command -v swipl >/dev/null 2>&1 || { echo "swipl not installed; skipping ontology validation"; exit 0; }
 	swipl -g "consult('ontology/flows.pl'), consult('ontology/inventory.pl'), halt."
 
-warehouse:  ## vintages, as-of views, exposure panel, coverage
-	@echo "warehouse: sqlite reference impl in warehouse/pit.py; Snowflake DDL in warehouse/*.sql"
+warehouse:  ## local SQLite vintage store and read-only SQL reports
+	@echo "SQLite DDL: warehouse/pit.py; reviewed queries: warehouse/sql/; model: docs/DATA_MODEL.md"
+
+security:  ## narrow secret and restricted-file check against Git index
+	$(PY) -m scripts.check_repository_hygiene
+
+audit:  ## read-only warehouse report; provide ARGS with db, asof and expected raw series
+	$(PY) -m scripts.audit_warehouse $(ARGS)
 
 compute:  ## Java curves, VAT-adjusted wedge, turnover proxies
 	@echo "compute: see compute/"

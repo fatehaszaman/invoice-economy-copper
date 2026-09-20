@@ -278,6 +278,42 @@ Inverse-variance weights are sample-based, not a historically tradable weighting
 rule. `sign_agreement = False` can mean incomplete evidence, not necessarily
 disagreement or rejection of a causal hypothesis.
 
+## Read-only warehouse audit
+
+The audit reuses the research store's `warehouse/sql/as_of.sql`; it does not
+maintain a second vintage-selection formula. Inventory and revision-history
+reports intentionally describe all acquired rows, while requested-series
+availability uses the explicit as-of date.
+
+```text
+audit(database, asof, expected_raw_series, optional_archive):
+    open an existing SQLite database in read-only mode
+    also enable query_only; do not initialize or migrate schema
+    inventory := grouped counts of all acquired observations
+    duplicates := groups with more than one row at the declared logical grain
+
+    for each explicitly requested raw series:
+        bind identifier and date as values in the shared as-of query
+        report eligible/non-null row counts and reference-date range
+        keep a zero-count result when the series is absent
+
+    if an archive directory was supplied:
+        for each distinct referenced payload hash, including missing hashes:
+            reject absent or malformed hash identifiers
+            reject symlinked files; report missing or unreadable files
+            stream SHA-256 over bytes and compare with the stored identifier
+
+    emit the audit as JSON without modifying the database or raw files
+    fail integrity status for duplicate keys or failed requested hash checks
+    keep coverage status separate; intact files do not imply adequate evidence
+```
+
+The raw-series list is supplied by the operator. This audit does not derive net
+imports or substitute for the builder's same-month two-leg requirement. Hash
+verification covers referenced payload bytes, not metadata sidecars, unreferenced
+files or authenticity. See `DATA_MODEL.md` and `../SECURITY.md` for the model and
+control boundaries.
+
 ## Empirical boundary
 
 The synthetic estimator demonstration is separate from the real-data snapshot.

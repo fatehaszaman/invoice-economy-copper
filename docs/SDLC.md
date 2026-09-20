@@ -145,3 +145,17 @@ operation have not been validated.
 These are not hidden implementation promises. They define why the repository
 can be reviewed as ongoing research, but cannot yet be released as a validated
 indicator or an empirical causal study.
+
+## Database and security extension
+
+The read-only audit and SQL reports are documented in `DATA_MODEL.md`; the bounded
+security controls and residual risks are documented in `../SECURITY.md`. For a
+change to these features, run `make lint`, `make test`, `make determinism`, then
+stage the intended files and run `make security` against the Git index. Verify
+SQL query assets are included in the built wheel when changing packaging.
+
+For local-data acceptance, run `scripts.audit_warehouse` with an explicit as-of
+date, expected raw series and optional archive directory. Inspect missing series
+separately from integrity failures: an exit code of zero does not establish
+adequate research coverage. Do not upload the local database or raw payloads to
+make CI pass; CI uses synthetic fixtures for these checks.

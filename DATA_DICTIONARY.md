@@ -29,6 +29,11 @@ entire reason "demand" is ambiguous in this market.
 
 ## Observation schema
 
+See `docs/DATA_MODEL.md` for the grain, ER diagram, nullable-key limitation and
+executable SQL audit examples. The single persistent table is `observations`;
+raw payload files and configuration definitions are external logical entities,
+not implemented SQL dimensions or foreign-key constraints.
+
 | Field | Type | Meaning |
 |---|---|---|
 | `canonical_series_id` | text | Stable internal identifier |

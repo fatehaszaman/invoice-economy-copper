@@ -20,6 +20,9 @@ dev = ["pytest>=7.4", "ruff>=0.4", "mypy>=1.8"]
 [tool.setuptools]
 packages = ["pcs", "research", "warehouse", "ingest", "scripts"]
 
+[tool.setuptools.package-data]
+warehouse = ["sql/*.sql"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
