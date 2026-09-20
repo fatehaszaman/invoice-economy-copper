@@ -31,50 +31,75 @@ A negative score does **not** mean fraud, fake demand, or financing. It means th
 
 **Market pricing series are deliberately excluded from the score.** Yangshan premium, Shanghai spot premium, and the SHFE–LME arbitrage state sit in a separate confirmation block and are tested as a *consequence* of PCS, never as an input. A physical premium can itself reflect genuine scarcity, so using premiums to build the predictor and then explaining premiums with it would be circular.
 
-## The validation
+## Proposed validation setting
 
 China's State Taxation Administration released the *Positive and Negative List for Taxpayer Compliance Invoicing* on **April 24, 2026** — 44 provisions organised around four-flow consistency, explicitly targeting circular invoicing, mutual invoicing, and artificially added transaction layers. Traders hit invoice quota limits, firms not engaged in physical trade largely suspended activity, and the Yangshan premium reached a record $119/t by July.
 
-That episode is not the contribution. It is the test environment: a case where the ground truth was independently reported, against which a general indicator can be checked.
+That episode motivates a proposed test environment, not established ground truth for this indicator. The event narrative and its source evidence require separate review before any empirical claim; this repository has not validated the score against the episode.
 
 ## Status
 
-**Live ingestion now runs; the causal analysis remains synthetic-only, and here is exactly why.** The infrastructure below is implemented and tested. `FINDINGS.md` does not exist yet and will not be written before the analysis runs on real data — and, as explained below, part of it structurally cannot yet.
+**Ongoing, unvalidated research.** Partial real-source ingestion and offline research infrastructure are implemented. A provisional monthly snapshot diagnostic is available; it is not a historically point-in-time backtest or a causal result. `FINDINGS.md` does not exist. Missing evidence is **inconclusive**, not a statistically established null effect.
 
 | Component | State |
 |---|---|
-| Point-in-time store with as-of resolution | implemented, tested |
+| Vintage store with as-of resolution | implemented, tested; unknown Comtrade release times use conservative retrieval bounds, not reconstructed historical vintages |
 | Snowflake DDL for the vintage tables | not yet written |
 | PCS construction and coverage metadata | implemented, tested |
-| PCS sensitivity band across weighting and coverage-floor grids | implemented, tested (`pcs/sensitivity.py`) |
+| PCS sensitivity diagnostics | equal, inverse-variance and leave-one-out implemented; residual **disabled/not specified** because the previous formula duplicated the baseline |
 | Exposure-intensity estimator, monotonicity, bootstrap, permutation, pre-trends | implemented, tested |
 | Placebo dates, negative-control metals, confounder ladder | implemented, tested against synthetic data (`research/placebos.py`, `research/confounders.py`) — see "Open research gap" below for why real data can't drive them yet |
 | Pre-registration lock mechanism | implemented, tested |
 | Four-flow ontology | implemented |
 | Live source ingestion | **partial and real** — SHFE and UN Comtrade are live; NBS, SHIBOR verified blocked from this build; LME in documented licensed fallback (see "Live ingestion status") |
-| Aggregate PCS on live data (`make realtime`) | runs, reports honest low/zero coverage given the gaps above — not a finding |
+| Original mixed-frequency PCS (`make realtime`, `make pcs`) | **blocked** until a reviewed frequency/alignment policy exists; no implicit 252-month normalization |
+| Monthly snapshot diagnostic (`make monthly`) | **provisional**: explicit monthly features, 36-month rolling window, 24 prior valid months; not preregistered and not empirically validated |
 | Findings | not started — by design, after the pipeline, and blocked on real per-channel data (see below) |
 
 **A null result is a publishable outcome of this repository.** `PREREGISTRATION.md` names eight conditions under which the hypothesis is rejected, each mapped to the module that tests it. If any triggers, that is what gets written up.
 
 ## Live ingestion status
 
-Verified directly against each source, not assumed from documentation:
+Status recorded during the September 19 build, not a claim that access conditions cannot change:
 
 | Source | Status | Evidence |
 |---|---|---|
 | [SHFE](https://www.shfe.com.cn/eng/reports/) daily trading (`kx{date}.dat`) | **Live.** Real daily volume/open-interest/settlement data for copper, no auth needed | `ingest/shfe.py`; feeds `volume_oi_churn` (commercial block) |
 | SHFE warehouse stocks (`dailystock`/`weeklystock`) | Not resolved | Every date/product-id pattern tried against the documented endpoint returned the site's HTML 404, not the JSON contract; `warrant_churn` and `deliveries_vs_warrant_change` remain unfilled |
-| [UN Comtrade](https://comtrade.un.org) (substitute for China Customs) | **Live, but stale.** Real China HS-7403 (refined copper) trade figures | `ingest/comtrade.py`; free `/public/v1/preview` tier caps China/HS7403 at **2024-12** (checked via `getDA`) — does **not** reach the April 2026 event window |
+| [UN Comtrade](https://comtrade.un.org) (trade proxy) | Historical HS-7403 import/export snapshots, including unwrought refined copper **and alloys** | Archive and default request range end at **2024-12**; this does not establish a universal free-tier ceiling or that paying would resolve it |
 | [NBS](https://data.stats.gov.cn/english/) | **Verified blocked.** HTTP 403 (WAF) on every request, including a full browser session | `ingest/nbs.py`; removes `cable_wire_output`, `semis_production`, `refined_production` — half the physical block |
 | [SHIBOR](https://www.shibor.org) | **Verified unreachable.** 403 / connection timeout, including a full browser session | `ingest/shibor.py`; does not feed core PCS, only the future confounder ladder |
 | [LME](https://www.lme.com) | **Licensed, not held.** By design — see `PREREGISTRATION.md` §9 | `ingest/lme.py`; pipeline runs in documented SHFE-only fallback mode |
 
-Run it yourself: `make ingest` (fetches and archives real payloads into the PIT store, 10 years of Comtrade history by default — see why in `scripts/run_ingest.py`) then `make realtime` (computes the live PCS score with coverage metadata). On this build, with 10 years of Comtrade history loaded, `net_refined_imports` clears the rolling-window minimum and produces 38 real non-NaN standardised values — the derived-series and standardisation math genuinely runs on live trade data. But the aggregate PCS confidence is **`unavailable` for every period**, because only 1 of 6 declared physical-block series and 1 of 5 declared commercial-block series have any live data at all, and per-block coverage never approaches the pre-registered 0.60 floor. That is the honest, correctly-labelled output of a coverage system doing its job — real signal in, real "not enough of it yet" out — not a bug.
+Run `make ingest`, then `make monthly` for the explicitly exploratory path. Default ingestion requests 36 months of trade history; a prior build archived additional older data, so a fresh database need not have the same history length. Only one declared physical input and one commercial input have data adapters producing observations in this build. Missing series stay in the coverage denominator. Fetching more years does not repair missing series or missing event-window data.
+
+## Methodology corrections and provisional monthly clock
+
+The September 20 correction replaces assumptions that passed tests but were not economically defensible. These corrections do not establish that the indicator works.
+
+| Issue | Implemented correction | Remaining limit |
+|---|---|---|
+| 252 observations applied indiscriminately | Original mixed-frequency config fails closed; alternative `config/pcs_monthly_exploratory.yaml` aggregates raw inputs monthly **before** transforms and standardization | Alternative specification is exploratory, not a modification of the original lock |
+| Assumed Comtrade release lag | No fixed 23-day date; snapshots become available no earlier than retrieval, with explicit unknown-publication flags | Actual release dates and historical vintages are still missing; retrieval is not a measured publication date |
+| Missing trade leg treated as zero | Net imports require both legs in the same month; a genuinely reported zero remains valid | Missing leg produces a missing input and lowers PCS coverage |
+| Redundant residual sensitivity | `(P-F)-(C-F)` check removed; residual status is `not_specified`, with no score | A distinct factor model and estimation window would need to be specified before reinstatement |
+
+The monthly alternative uses **36 calendar months with at least 24 valid prior transformed values**, shifted by one month. The same clock applies to both blocks. This is an explicit provisional choice, not a parameter selected for a favorable result:
+
+- Daily volume/OI churn: mean of observed daily ratios, requiring at least 15 observations per month. This is not monthly volume divided by month-end OI.
+- Weekly turnover ratios/proxies: mean of observed weekly values, requiring at least 3 observations.
+- Weekly inventory withdrawals: sum, requiring at least 3 observations. The source adapter and non-overlapping flow definition remain unresolved.
+- Monthly quantities: the single monthly observation; duplicate observations in a month are rejected. Annual/cumulative NBS releases and January/February combined releases need source-specific handling before ingestion.
+- Current partial calendar months are excluded. Empty months and insufficient-count months remain missing; reported zero flows remain zero. Minimum-count rules are quality screens, **not exchange-calendar completeness guarantees**.
+- Missing calendar months remain gaps in transforms and rolling moments. Log differences of nonpositive net flows remain unavailable rather than being forced into a logarithm.
+
+The CLI computes **snapshot history at one as-of date**. Even though normalization uses prior months, this is not a sequence of historically available trading signals. Comtrade snapshots downloaded after the event cannot become event-window information merely because their economic reference months are earlier. Legacy rows with the old assumed lag are also retrieval-gated, without rewriting the archived provenance. Intraday availability is not modeled.
+
+The monthly clock cannot distinguish April 13 from April 24 within April. It does not inherit the original daily event-study estimand, event-window controls, or preregistration claim. Inverse-variance sensitivity uses the supplied sample and is descriptive, not a historical real-time weighting scheme. Sign agreement requires all declared variants and common valid periods; unavailable residual results cannot produce a robustness pass.
 
 ## Open research gap
 
-The causal exposure/monotonicity analysis (`research/exposure.py`, `research/monotonicity.py`, `research/placebos.py`, `research/confounders.py`) needs an outcome panel disaggregated by invoice-exposure channel — e.g. `scrap_domestic__multi_intermediary` versus `cathode__direct_smelter`, per `config/exposure.yaml`. **No public source publishes Chinese copper trade or production activity at that channel granularity.** This is a genuine, unsolved research-design gap, not a missing fetcher: even with every source above fully live, the per-channel panel would still not exist. Closing it needs either intermediary-level proprietary data (a trading desk, a customs broker, a licensed reseller) or a transparent, pre-registered proxy construction — the second of which this project's own rules (`MISTAKES.md` #6, `DECISIONS.md` #24: "Findings before pipeline: forbidden") require to be decided and recorded *before* looking at any resulting numbers, not after. The estimator, monotonicity check, placebo/negative-control machinery, and confounder ladder are all implemented and validated against the synthetic panel (`tests/synthetic/make_panel.py`) precisely so they're ready the day that panel exists — they are not the blocker.
+The exposure/monotonicity analysis needs outcomes disaggregated by invoice-exposure channel, as declared in `config/exposure.yaml`. **This build has not identified or ingested a usable channel-level panel.** That is not proof that none exists anywhere. Aggregate exchange and trade data do not by themselves identify intermediary exposure. A suitable licensed dataset or a separately specified proxy design would need validation before estimation. Synthetic tests exercise the estimators; they do not establish identification, rule out confounding, or prove readiness for a real causal study.
 
 ## What is unusual here
 
@@ -86,7 +111,7 @@ git log --diff-filter=A --format='%ad %h %s' -- research/            # must be l
 cat pcs.lock
 ```
 
-**There is no function that returns "the current value."** All research reads go through `as_of(series_id, asof)`, which selects the greatest publication timestamp at or before the as-of date. The latest vintage is reachable only by passing today's date explicitly, which makes the choice visible in code review. `tests/unit/test_pit.py` includes an adversarial case that a naive latest-value implementation passes everything else and fails only there.
+**As-of dates are explicit.** `as_of(series_id, asof)` selects eligible vintages using publication dates when verified, and conservative retrieval bounds for Comtrade or unknown-publication snapshots. Tests cover both verified revision history and the exclusion of later-downloaded Comtrade values from an earlier as-of date. A store can enforce metadata; it cannot manufacture missing historical vintages.
 
 **The null case is tested.** `test_null_case_does_not_manufacture_significance` generates data with zero planted effect and asserts the pipeline declines to find one. Most projects test that a method detects an effect; testing that it refuses to invent one is what stops a pipeline from producing a result regardless of the data.
 
@@ -98,14 +123,15 @@ cat pcs.lock
 git clone https://github.com/fatehaszaman/invoice-economy-copper
 cd invoice-economy-copper
 make install
-make test          # 57 tests
+make test          # offline regression suite
+make lint          # lint and type checks; failures return nonzero
 make ingest        # fetch real SHFE + UN Comtrade data into the PIT store
-make realtime      # compute the live PCS score with honest coverage labels
-make lock          # freeze the instrument
-make all           # full pipeline
+make monthly       # EXPLORATORY monthly snapshot, not a historical backtest
+make realtime      # intentionally refuses the unresolved original mixed-frequency config
+# make all runs offline synthetic stages, NOT a completed empirical pipeline
 ```
 
-Where licensed LME history is unavailable, `make all` runs in documented SHFE-only fallback mode and labels affected results rather than crashing or silently substituting. `make robustness` and `make report` intentionally still fail — see "Open research gap" above for why.
+Do not regenerate `pcs.lock` as a routine run step. Original config and lock are preserved; lock tests operate on temporary files. `make robustness` and `make report` intentionally fail because empirical validation and findings are unavailable. `make monthly` neither obtains a channel-level panel nor resolves licensed-data gaps.
 
 ## Layout
 
@@ -137,11 +163,11 @@ Publicly accessible or individually licensed source data. No employer or confide
 |---|---|---|
 | [SHFE](https://www.shfe.com.cn/eng/reports/) | Daily settlement, volume, open interest, weekly warehouse stocks | Daily settlement/volume/OI **live**; warehouse stocks not resolved (see above) |
 | [LME](https://www.lme.com) | Reference prices, official stocks — [historical data is licensed](https://www.lme.com/Market-data/Accessing-market-data/Historical-data) | Licensed fallback, by design |
-| [UN Comtrade](https://comtrade.un.org) (substitute for [China Customs](http://english.customs.gov.cn), which has no free machine-readable feed) | Cathode, scrap, semis trade | **Live**, free tier capped at 2024-12 |
+| [UN Comtrade](https://comtrade.un.org) (trade proxy) | HS-7403 imports/exports only; not scrap, semis or cathode-only data | Archived through 2024-12; exact historical vintages unverified |
 | [NBS](https://data.stats.gov.cn/english/) | Refined production, cable and wire output, grid investment | Verified blocked (HTTP 403 WAF) |
 | [SHIBOR](https://www.shibor.org) | Onshore rates, CNH forwards, USD funding | Verified unreachable |
 
-Turnover is **proxied** from public measures and said to be proxied. No circulation multiplier is reported as a number; the reported result is a differential ordered by exposure intensity.
+Turnover is **proxied** from public measures. No circulation multiplier or empirical exposure-ordered effect is currently reported.
 
 ## Background reading on the event
 

@@ -5,10 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "invoice-economy-copper"
 version = "0.1.0"
-description = "A cross-source Physical Consistency Score for commodity data, validated against China's 2026 invoice enforcement episode"
+description = "Ongoing copper-market consistency research with partial ingestion and synthetic validation"
 requires-python = ">=3.11"
 dependencies = [
-    "pandas>=2.0",
+    "pandas>=2.2",
     "numpy>=1.24",
     "scipy>=1.10",
     "pyyaml>=6.0",

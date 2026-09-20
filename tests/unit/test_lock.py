@@ -3,7 +3,14 @@ import json
 
 import pytest
 
-from pcs.lock import LOCK_PATH, LockError, fingerprint, verify_lock, write_lock
+from pcs import lock
+from pcs.lock import LockError, fingerprint, verify_lock, write_lock
+
+
+@pytest.fixture(autouse=True)
+def isolated_lock(tmp_path, monkeypatch):
+    """Tests must never regenerate the repository's preregistration lock."""
+    monkeypatch.setattr(lock, "LOCK_PATH", tmp_path / "pcs.lock")
 
 
 def test_lock_captures_all_preregistered_files():
@@ -29,9 +36,9 @@ def test_verify_passes_on_an_unmodified_tree():
 def test_verify_detects_config_drift(tmp_path):
     """Changing the instrument after pre-registration must fail the build."""
     write_lock()
-    locked = json.loads(LOCK_PATH.read_text())
+    locked = json.loads(lock.LOCK_PATH.read_text())
     locked["files"]["config/pcs.yaml"] = "0" * 64
-    LOCK_PATH.write_text(json.dumps(locked, indent=2, sort_keys=True))
+    lock.LOCK_PATH.write_text(json.dumps(locked, indent=2, sort_keys=True))
     try:
         with pytest.raises(LockError, match="drifted after pre-registration"):
             verify_lock()
@@ -40,13 +47,13 @@ def test_verify_detects_config_drift(tmp_path):
 
 
 def test_missing_lock_blocks_estimation():
-    original = LOCK_PATH.read_text() if LOCK_PATH.exists() else None
-    LOCK_PATH.unlink(missing_ok=True)
+    original = lock.LOCK_PATH.read_text() if lock.LOCK_PATH.exists() else None
+    lock.LOCK_PATH.unlink(missing_ok=True)
     try:
         with pytest.raises(LockError, match="missing"):
             verify_lock()
     finally:
         if original is not None:
-            LOCK_PATH.write_text(original)
+            lock.LOCK_PATH.write_text(original)
         else:
             write_lock()

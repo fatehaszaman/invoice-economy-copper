@@ -1,0 +1,30 @@
+# NOT preregistered. A separate descriptive research specification.
+# The original config/pcs.yaml and pcs.lock remain unchanged.
+status: exploratory_unvalidated
+research_clock: monthly
+standardisation:
+  method: rolling_zscore
+  window_by_frequency: {monthly: 36}
+  min_periods_by_frequency: {monthly: 24}
+  prior_vintage_only: true
+aggregation:
+  weights: equal
+  impute_missing: false
+  coverage_floor: 0.60
+# Aggregate raw values, then transform, then z-score using prior months.
+# Min-count rules are provisional data-quality thresholds, not an exchange
+# calendar completeness test. Current partial calendar months are excluded.
+blocks:
+  physical:
+    - {id: cable_wire_output, transform: log_diff, frequency: monthly, monthly_aggregation: last, min_observations_per_month: 1}
+    - {id: semis_production, transform: log_diff, frequency: monthly, monthly_aggregation: last, min_observations_per_month: 1}
+    - {id: refined_production, transform: log_diff, frequency: monthly, monthly_aggregation: last, min_observations_per_month: 1}
+    - {id: net_refined_imports, transform: log_diff, frequency: monthly, monthly_aggregation: last, min_observations_per_month: 1}
+    - {id: inventory_withdrawals, transform: diff, frequency: weekly, monthly_aggregation: sum, min_observations_per_month: 3}
+    - {id: scrap_utilisation, transform: log_diff, frequency: monthly, monthly_aggregation: last, min_observations_per_month: 1}
+  commercial:
+    - {id: volume_oi_churn, transform: log_diff, frequency: daily, monthly_aggregation: mean, min_observations_per_month: 15}
+    - {id: warrant_churn, transform: log_diff, frequency: weekly, monthly_aggregation: mean, min_observations_per_month: 3}
+    - {id: deliveries_vs_warrant_change, transform: level, frequency: weekly, monthly_aggregation: mean, min_observations_per_month: 3}
+    - {id: ownership_transfer_proxy, transform: log_diff, frequency: weekly, monthly_aggregation: mean, min_observations_per_month: 3}
+    - {id: trader_activity_proxy, transform: log_diff, frequency: weekly, monthly_aggregation: mean, min_observations_per_month: 3}

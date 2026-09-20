@@ -36,3 +36,27 @@ a deliberate re-lock. `make estimate` fails until that happens.
 | 25 | GACC substitute | UN Comtrade `public/v1/preview`, HS 7403 | GACC publishes no free machine-readable feed; Comtrade republishes the same declarations. Free tier verified capped at 2024-12 for China/HS7403 (`ingest/getDA` check, 2026-09-19) — does not cover the April 2026 event window | A licensed Comtrade key, or a GACC bulletin parser |
 | 26 | NBS / SHIBOR live access | verified blocked, not attempted-and-abandoned | `data.stats.gov.cn` returns HTTP 403 (WAF) and `shibor.org` times out / 403s, from this build environment, via both `curl` and a full CDP browser session, checked 2026-09-19 | Running ingestion from a different network, or a licensed reseller (CEIC, Wind, Mysteel) |
 | 27 | `pcs/sensitivity.py` "residual" construction | cross-sectional demeaning vs. the pooled physical+commercial mean per period | The config names the variant but does not specify its formula; this is a documented interpretation, not a recovered specification | Author confirms or replaces the formula before this variant is used in a reported result |
+
+## Corrections recorded 2026-09-20
+
+These entries supersede earlier implementation assumptions. The original
+`config/pcs.yaml`, `config/events.yaml`, `config/exposure.yaml`,
+`PREREGISTRATION.md`, and `pcs.lock` are unchanged. No empirical result has
+been established or rescued by these changes.
+
+| Decision | Old behavior | Corrected behavior | Reason / impact |
+|---|---|---|---|
+| Frequency | 252 native observations for daily and monthly inputs, then daily reindexing | Original mixed-frequency calculation refuses to run. Separate `pcs_monthly_exploratory.yaml` aggregates first, then uses a 36-calendar-month window with 24 prior valid transformed months | Comparable clock; explicit provisional alternative, not the preregistered daily event study |
+| Monthly features | Unspecified | Daily ratio means (15 observations minimum), weekly ratio means or withdrawal sums (3 minimum), one observation for monthly series; omit partial current month | Transparent thresholds, not calibrated to output. Exchange completeness, cumulative NBS data and weekly flow overlap still require review |
+| Comtrade availability | Month end plus 23 days | Unknown publication is flagged and bounded by retrieval; legacy snapshots are also retrieval-gated | Prevents later-downloaded values from masquerading as known historical vintages |
+| Comtrade scope/access, superseding #25 | Claimed universal 2024-12 free-tier cap and pure refined-copper proxy | 2024-12 is the archived/default-request endpoint, not proof of a plan restriction. HS 7403 includes alloys | No claim that payment solves access; no cathode-only interpretation |
+| Missing legs | Missing import or export treated as zero | Both legs must be observed in the same month; otherwise net observation missing | Coverage reflects missingness; true reported zeros remain usable |
+| Residual, superseding #27 | Same common factor subtracted from both block means | Disabled as `not_specified`; no score or robustness pass | Algebraically cancels: `(P-F)-(C-F) = P-C`. Reinstatement requires a separate factor/loading/window specification |
+| Sensitivity reporting | Missing variants could be skipped; leave-one-out paths bypassed floor | Explicit unavailable statuses, coverage-masked paths, common-period sign checks including each dropout | Inconclusive is not agreement, and diagnostic sign checks are not causal falsification verdicts |
+| Lock handling | Tests and some routine make targets rewrote the lock | Tests use temporary files; routine scoring verifies rather than regenerates | Preserve provenance; code corrections do not establish that the exploratory policy was preregistered |
+
+The earlier assertion that no public channel-level panel exists anywhere is
+withdrawn. The supportable statement is that this build has not identified
+or ingested a suitable panel. Lack of coverage is inconclusive, not a null
+effect. The earlier daily-grid coverage counts are not validation evidence
+for the corrected monthly method.

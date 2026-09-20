@@ -34,22 +34,26 @@ entire reason "demand" is ambiguous in this market.
 | `canonical_series_id` | text | Stable internal identifier |
 | `economic_object` | enum | What the row measures; validated against the ontology |
 | `observation_ts` | date | The period the value describes |
-| `publication_ts` | date | When the value first became knowable |
+| `publication_ts` | date | Verified release date when known; new unknown-publication snapshots use retrieval as a flagged conservative availability bound |
+| `available_ts` | date, read output | Effective availability used by `as_of`; includes retrieval gating of legacy Comtrade rows |
 | `retrieval_ts` | date | When this pipeline fetched it |
 | `canonical_value` | float | Value in canonical units |
 | `unit` | text | tonnes, CNY/t, USD/t, index |
 | `source` | enum | shfe, lme, customs, nbs, shibor |
 | `revision_number` | int | 0 = first print |
-| `vintage_id` | text | `publication_ts#revision_number` |
-| `raw_hash` | text | SHA-256 of the archived payload this came from |
+| `vintage_id` | text | Explicit vintage identifier; live adapters use `publication_ts#payload_hash` |
+| `payload_hash` | text | SHA-256 of the archived payload this came from |
+| `quality_flags` | text | Semicolon-separated limitations, including unknown publication time and unverified historical vintage |
 
 `publication_ts` must not precede `observation_ts`. Enforced at construction.
 
 ## Publication lag
 
-Lag is **measured from observed vintages, not assumed from documentation.**
-Documented calendars slip; the store records what actually happened, and
-`publication_lag()` reports the empirical distribution.
+`publication_lag()` excludes Comtrade and explicitly unknown-publication
+snapshots: acquisition delay is not publication delay. The calendar ranges
+below are contextual expectations, not dates assigned to downloaded values.
+Verified release metadata for the exact vintage is required to establish
+historical availability.
 
 | Series | Frequency | Typical lag | Revised |
 |---|---|---|---|
@@ -81,7 +85,7 @@ category error, and the comparison is refused rather than adjusted silently.
 
 | Mode | Handling |
 |---|---|
-| Chinese New Year distortion | Calendar-adjusted; Jan–Feb treated jointly for monthly series |
+| Chinese New Year distortion | Not resolved by the exploratory monthly aggregation; combined Jan–Feb source releases need an explicit adapter policy |
 | NBS revisions | Full vintage history retained; research reads as-of only |
 | Unit inconsistency (dmt vs wmt) | Canonicalised at ingest; conversion declared |
 | VAT-inclusive vs exclusive prices | Treated as distinct series, never mixed |
@@ -89,3 +93,7 @@ category error, and the comparison is refused rather than adjusted silently.
 | Licensed LME history absent | Documented SHFE-only fallback; affected results labelled |
 | Source schema drift | Weekly CI run fails loudly rather than producing a wrong number |
 | Cross-source disagreement | Flagged with both values preserved; never auto-reconciled |
+| Missing import/export leg | Net imports missing; reported zero is retained, never inferred |
+| Unknown Comtrade release/vintage | Retrieval-bounded; historical PIT claim withheld |
+| Mixed frequencies | Original config blocked; separate exploratory monthly rules in README/config |
+| HS-7403 scope | Includes unwrought refined copper and alloys; broader than a cathode-only measure |

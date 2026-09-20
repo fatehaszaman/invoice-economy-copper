@@ -1,4 +1,4 @@
-.PHONY: help install test lint ingest canonical ontology warehouse compute lock pcs estimate robustness realtime report determinism all clean
+.PHONY: help install test lint ingest canonical ontology warehouse compute lock pcs estimate robustness realtime monthly report determinism all clean
 
 PY := python
 
@@ -12,8 +12,8 @@ test:  ## full test suite
 	$(PY) -m pytest tests -q
 
 lint:  ## style and type checks
-	$(PY) -m ruff check . || true
-	$(PY) -m mypy pcs research warehouse --ignore-missing-imports || true
+	$(PY) -m ruff check .
+	$(PY) -m mypy pcs research warehouse --ignore-missing-imports --explicit-package-bases
 
 ingest:  ## fetch + archive raw payloads (idempotent, resumable)
 	$(PY) -m scripts.run_ingest
@@ -34,7 +34,8 @@ compute:  ## Java curves, VAT-adjusted wedge, turnover proxies
 lock:  ## freeze the PCS instrument definition -> pcs.lock
 	$(PY) -m pcs.lock
 
-pcs: lock  ## build the score with coverage metadata and sensitivity band
+pcs:  ## original specification (refuses unresolved mixed-frequency scoring)
+	@$(PY) -c "from pcs.lock import verify_lock; verify_lock()"
 	$(PY) -m scripts.run_realtime
 
 # The pre-registration guarantee is a BUILD DEPENDENCY, not a promise.
@@ -52,8 +53,11 @@ robustness:  ## pre-trends, placebos, confounder ladder, spec grid
 	@echo "See README \"Live ingestion status\" and \"Open research gap\"."
 	@exit 1
 
-realtime:  ## PIT-constrained PCS + incremental information test
+realtime:  ## original snapshot diagnostic; not a historical real-time backtest
 	$(PY) -m scripts.run_realtime
+
+monthly:  ## exploratory monthly snapshot; unvalidated and not preregistered
+	$(PY) -m scripts.run_realtime --config config/pcs_monthly_exploratory.yaml
 
 report:  ## regenerate every figure and table in FINDINGS.md
 	@echo "NOT YET IMPLEMENTED: FINDINGS.md does not exist and will not until the analysis runs."
@@ -62,8 +66,9 @@ report:  ## regenerate every figure and table in FINDINGS.md
 determinism:  ## run twice, diff outputs, fail on drift
 	bash scripts/check_determinism.sh
 
-all: test ontology lock estimate  ## everything currently implemented, end to end
-	@echo "Implemented stages complete. Live ingestion, PCS build on real data, and the report are pending."
+all: test ontology estimate  ## offline synthetic validation, NOT the empirical pipeline
+	@echo "Offline synthetic stages complete. Use make ingest and make monthly for descriptive data."
+	@echo "Empirical validation and findings remain unavailable."
 
 clean:
 	rm -rf build dist *.egg-info .pytest_cache out

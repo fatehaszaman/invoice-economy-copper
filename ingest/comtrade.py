@@ -1,23 +1,17 @@
-"""UN Comtrade fetcher — substitute for China Customs (GACC) trade detail.
+"""UN Comtrade HS-7403 import/export snapshot adapter.
 
-GACC does not publish a free, machine-readable copper trade feed; its
-detailed bulletins are commentary, not a data API. UN Comtrade republishes
-the same underlying customs declarations reporter-countries submit,
-including China's, so it is used here as the accessible proxy the README
-already frames as necessary ("Publicly accessible or individually licensed
-source data").
+The archived build retrieved data through 2024-12. That observation is not
+proof of a universal free-tier ceiling, nor that a paid key resolves the gap.
+The default requested date range in run_ingest.py is fixed and must be
+reviewed separately when seeking newer data.
 
-**Material limitation, verified at build time, not assumed:** the free
-`/public/v1/preview` tier caps China's HS-7403 (unwrought refined copper)
-monthly series at December 2024 (`getDA` enumerates no later dataset). It
-therefore CANNOT reach the April 2026 enforcement window this project
-studies. This fetcher is real and returns real customs figures — it is
-useful for historical / pre-event context, negative-control checks, and for
-validating the ingestion and PIT-store plumbing end to end — but it is not
-a substitute for a paid Comtrade subscription or GACC bulletin data when the
-live event-window estimation eventually runs. Do not remove this docstring
-warning when extending the date range: silently forgetting it is exactly the
-kind of look-ahead-shaped gap `warehouse/pit.py` exists to prevent.
+HS 7403 includes unwrought refined copper AND copper alloys. The existing
+internal refined_copper_trade_* identifiers are retained for compatibility,
+but this is a broad proxy, not a cathode-only measure.
+
+No verified release/vintage metadata accompanies these parsed values.
+Retrieval is the conservative availability bound; historical snapshots
+cannot reconstruct what was known in the event window.
 """
 from __future__ import annotations
 
@@ -32,10 +26,6 @@ PARTNER_WORLD = 0
 HS_REFINED_COPPER = "7403"  # unwrought refined copper and copper alloys
 KG_PER_TONNE = 1000.0
 
-# China customs trade release lag, per DATA_DICTIONARY.md: 20-25 days.
-PUBLICATION_LAG_DAYS = 23
-
-
 class ComtradeCopperFetcher(Fetcher):
     """Monthly China refined-copper (HS 7403) import/export volumes.
 
@@ -46,10 +36,13 @@ class ComtradeCopperFetcher(Fetcher):
     source = "customs"
     license_class = "public"
 
-    def __init__(self, periods: list[str], archive=None) -> None:
+    def __init__(self, periods: list[str], archive=None, retrieved_on: date | None = None) -> None:
         """`periods`: list of 'YYYYMM' strings to request."""
         super().__init__(archive=archive)
         self.periods = periods
+        # For offline replay, this must be the archived payload's retrieval
+        # date, never the historical period or an assumed release lag.
+        self.retrieved_on = retrieved_on or date.today()
 
     def endpoints(self) -> list[str]:
         urls = []
@@ -81,9 +74,14 @@ class ComtradeCopperFetcher(Fetcher):
                 continue
             tonnes = float(net_wgt_kg) / KG_PER_TONNE
             flow = r.get("flowCode")
+            if flow not in {"M", "X"}:
+                raise ValueError(f"Unsupported trade flow: {flow!r}")
             sign = 1.0 if flow == "M" else -1.0  # imports positive, exports negative
 
-            pub_ts = date.fromordinal(obs_ts.toordinal() + PUBLICATION_LAG_DAYS)
+            # This response has no verified publication timestamp for this
+            # exact value/vintage. Retrieval is a conservative availability
+            # bound, NOT a claim about the original statistical release.
+            pub_ts = self.retrieved_on
 
             out.append(
                 {
@@ -103,7 +101,10 @@ class ComtradeCopperFetcher(Fetcher):
                     "source_url": url,
                     "license_class": self.license_class,
                     "frequency": "monthly",
-                    "quality_flags": "comtrade_free_tier_stale_beyond_202412",
+                    "quality_flags": (
+                        "publication_time_unknown;availability_from_retrieval;"
+                        "historical_vintage_unverified"
+                    ),
                 }
             )
         return out

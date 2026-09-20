@@ -16,16 +16,13 @@ recorded plainly rather than presented as equally pre-registered:
     series excluded; report the resulting PCS range across all N leave-outs.
     This tests whether the result depends on any single series, which is
     the plain reading of the name.
-  - `residual`: cross-sectional demeaning within each block before
-    averaging — subtract, at each period, the mean across ALL series in
-    BOTH blocks combined, so common shocks that move physical and
-    commercial series together (e.g. a broad copper demand swing) are
-    removed before the physical-minus-commercial contrast is taken. This is
-    one reasonable reading of "residual construction" as a way to isolate
-    the physical-versus-commercial wedge from a common factor; it is an
-    interpretation, not a specification recovered from the repository, and
-    should be reviewed against the author's original intent before being
-    relied on for a reported result.
+  - `residual`: unavailable pending a specified factor model. The earlier
+    common-factor subtraction was algebraically identical to the baseline:
+    (P-F)-(C-F) = P-C. It must not count as independent robustness evidence.
+
+These are descriptive sensitivity diagnostics, not causal falsification
+tests. Inverse-variance weighting uses the supplied sample and is not a
+historical real-time weighting rule.
 """
 from __future__ import annotations
 
@@ -33,7 +30,6 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from .blocks import block_mean
 from .score import compute_pcs
 
 VARIANTS = ("equal", "inverse_variance", "leave_one_out", "residual")
@@ -44,34 +40,33 @@ class SensitivityResult:
     variant: str
     pcs: pd.Series  # indexed by date; NaN where unavailable
     detail: dict
+    status: str = "available"
 
 
-def _leave_one_out(physical_z: pd.DataFrame, commercial_z: pd.DataFrame) -> SensitivityResult:
-    variants = {}
+def _eligible(frame: pd.DataFrame) -> pd.Series:
+    return pd.to_numeric(frame["pcs"], errors="coerce").where(frame["confidence"] == "valid")
+
+
+def _leave_one_out(
+    physical_z: pd.DataFrame, commercial_z: pd.DataFrame, coverage_floor: float,
+) -> SensitivityResult:
+    pcs_by_dropout = {}
     for block_name, z in (("physical", physical_z), ("commercial", commercial_z)):
         for dropped in z.columns:
             kept = z.drop(columns=[dropped])
             if kept.shape[1] == 0:
                 continue
-            mean, _ = block_mean(kept)
-            variants[f"drop_{block_name}:{dropped}"] = mean
+            p = kept if block_name == "physical" else physical_z
+            c = kept if block_name == "commercial" else commercial_z
+            frame = compute_pcs(p, c, coverage_floor=coverage_floor)
+            pcs_by_dropout[f"drop_{block_name}:{dropped}"] = _eligible(frame)
 
-    if not variants:
+    if not pcs_by_dropout:
         raise ValueError("need at least two series in some block to leave one out")
 
-    p_mean, _ = block_mean(physical_z)
-    c_mean, _ = block_mean(commercial_z)
-
-    pcs_by_dropout = {}
-    for key, series in variants.items():
-        if key.startswith("drop_physical:"):
-            pcs_by_dropout[key] = series - c_mean.reindex(series.index)
-        else:
-            pcs_by_dropout[key] = p_mean.reindex(series.index) - series
-
     frame = pd.DataFrame(pcs_by_dropout)
-    central = p_mean - c_mean
-    spread = frame.max(axis=1) - frame.min(axis=1)
+    central = _eligible(compute_pcs(physical_z, commercial_z, coverage_floor=coverage_floor))
+    spread = (frame.max(axis=1) - frame.min(axis=1)).where(frame.notna().all(axis=1))
     return SensitivityResult(
         variant="leave_one_out",
         pcs=central,
@@ -80,46 +75,44 @@ def _leave_one_out(physical_z: pd.DataFrame, commercial_z: pd.DataFrame) -> Sens
 
 
 def _residual(physical_z: pd.DataFrame, commercial_z: pd.DataFrame) -> SensitivityResult:
-    combined = pd.concat([physical_z, commercial_z], axis=1)
-    common_factor = combined.mean(axis=1, skipna=True)
-
-    phys_resid = physical_z.sub(common_factor, axis=0)
-    comm_resid = commercial_z.sub(common_factor, axis=0)
-
-    p_mean, p_cov = block_mean(phys_resid)
-    c_mean, c_cov = block_mean(comm_resid)
-    pcs = p_mean - c_mean
     return SensitivityResult(
         variant="residual",
-        pcs=pcs,
+        pcs=pd.Series(float("nan"), index=physical_z.index.union(commercial_z.index)),
         detail={
-            "common_factor": common_factor,
-            "physical_coverage": p_cov,
-            "commercial_coverage": c_cov,
+            "reason": "No independent factor model specified; common subtraction cancels."
         },
+        status="not_specified",
     )
 
 
 def compute_all_variants(
-    physical_z: pd.DataFrame, commercial_z: pd.DataFrame
+    physical_z: pd.DataFrame, commercial_z: pd.DataFrame, coverage_floor: float = 0.60,
 ) -> dict[str, SensitivityResult]:
     out = {}
 
-    equal = compute_pcs(physical_z, commercial_z, weights="equal")
-    out["equal"] = SensitivityResult(variant="equal", pcs=equal["pcs"], detail={})
+    equal = compute_pcs(physical_z, commercial_z, weights="equal", coverage_floor=coverage_floor)
+    out["equal"] = SensitivityResult(variant="equal", pcs=_eligible(equal), detail={})
 
     try:
-        inv = compute_pcs(physical_z, commercial_z, weights="inverse_variance")
-        out["inverse_variance"] = SensitivityResult(
-            variant="inverse_variance", pcs=inv["pcs"], detail={}
+        inv = compute_pcs(
+            physical_z, commercial_z, weights="inverse_variance", coverage_floor=coverage_floor
         )
-    except ValueError:
-        pass  # all-zero-variance series; not every panel supports this variant
+        out["inverse_variance"] = SensitivityResult(
+            variant="inverse_variance", pcs=_eligible(inv), detail={}
+        )
+    except ValueError as error:
+        out["inverse_variance"] = SensitivityResult(
+            "inverse_variance", _eligible(equal) * float("nan"),
+            {"reason": str(error)}, status="unavailable",
+        )
 
     try:
-        out["leave_one_out"] = _leave_one_out(physical_z, commercial_z)
-    except ValueError:
-        pass
+        out["leave_one_out"] = _leave_one_out(physical_z, commercial_z, coverage_floor)
+    except ValueError as error:
+        out["leave_one_out"] = SensitivityResult(
+            "leave_one_out", _eligible(equal) * float("nan"),
+            {"reason": str(error)}, status="unavailable",
+        )
 
     out["residual"] = _residual(physical_z, commercial_z)
     return out
@@ -141,16 +134,27 @@ def coverage_floor_sensitivity(
 
 
 def sign_agreement(results: dict[str, SensitivityResult]) -> bool:
-    """Falsification check: does every variant agree on the sign of the
-    mean PCS over the periods where it is defined? A single dissenting
-    variant, per PREREGISTRATION.md §6, is enough to trigger the condition.
+    """Conservative diagnostic, NOT a causal falsification verdict.
+
+    Require every declared variant, a specified model, and common valid
+    periods. Also check each leave-one-out path rather than counting the
+    baseline again. False can mean unavailable/inconclusive, not disagreement.
     """
-    means = []
-    for r in results.values():
-        v = r.pcs.dropna()
-        if not v.empty:
-            means.append(float(v.mean()))
-    if len(means) < 2:
+    if not set(VARIANTS) <= results.keys():
         return False
-    signs = {m > 0 for m in means}
+    columns = {}
+    for name in VARIANTS:
+        result = results[name]
+        if result.status != "available":
+            return False
+        columns[name] = result.pcs
+        if name == "leave_one_out":
+            dropouts = result.detail.get("per_dropout")
+            if dropouts is None or dropouts.empty:
+                return False
+            columns.update({f"loo:{col}": dropouts[col] for col in dropouts})
+    common = pd.DataFrame(columns).dropna()
+    if common.empty:
+        return False
+    signs = {0 if mean == 0 else (1 if mean > 0 else -1) for mean in common.mean()}
     return len(signs) == 1

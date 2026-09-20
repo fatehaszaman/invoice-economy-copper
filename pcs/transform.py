@@ -17,7 +17,7 @@ def apply_transform(s: pd.Series, kind: str) -> pd.Series:
     if kind == "diff":
         return s.diff()
     if kind == "pct":
-        return s.pct_change()
+        return s.pct_change(fill_method=None)
     if kind == "level":
         return s.astype(float)
     raise ValueError("surprise transform requires an expectation series; use surprise()")

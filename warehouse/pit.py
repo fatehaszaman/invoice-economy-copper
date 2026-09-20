@@ -15,9 +15,9 @@ Design decision, deliberate: there is no function returning "the current
 value". The latest vintage is reachable only by passing an explicit date,
 which makes the choice visible in calling code and in review.
 
-SQLite is the reference implementation so the guarantee is testable on a
-clean clone. `warehouse/*.sql` targets Snowflake with identical as-of
-semantics; `test_pit_parity.py` checks the two agree on fixtures.
+SQLite is the reference implementation. It can enforce supplied vintage
+metadata, not establish that metadata's historical authenticity. Comtrade
+snapshots without verified release metadata are gated at retrieval.
 """
 
 from __future__ import annotations
@@ -128,10 +128,7 @@ class PITStore:
         is what makes revision behaviour measurable instead of invisible.
         """
         vintage = obs.vintage_id or obs.publication_ts.isoformat()
-        self.conn.execute(
-            """INSERT OR REPLACE INTO observations VALUES
-               (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (
+        values = (
                 obs.canonical_series_id,
                 obs.channel_id,
                 obs.economic_object,
@@ -152,7 +149,26 @@ class PITStore:
                 obs.payload_hash,
                 obs.license_class,
                 obs.quality_flags,
-            ),
+            )
+        existing = self.conn.execute(
+            """SELECT * FROM observations
+               WHERE canonical_series_id = ? AND channel_id IS ?
+                 AND observation_ts = ? AND vintage_id = ?""",
+            (obs.canonical_series_id, obs.channel_id, obs.observation_ts.isoformat(), vintage),
+        ).fetchone()
+        if existing is not None:
+            if existing == values:
+                return  # Idempotent, including SQLite's nullable channel key.
+            if (
+                existing[:5] == values[:5] and existing[6:] == values[6:]
+                and existing[5] <= values[5]
+            ):
+                return  # Same vintage fetched again: retain its first retrieval.
+            raise ValueError("Conflicting vintage: append a new vintage_id; do not overwrite.")
+        self.conn.execute(
+            """INSERT INTO observations VALUES
+               (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            values,
         )
         self.conn.commit()
 
@@ -166,41 +182,49 @@ class PITStore:
     ) -> pd.DataFrame:
         """Values for `series_id` as they were known on `asof`.
 
-        Per observation_ts, selects the row with the greatest publication_ts
-        that is <= asof. Rows published after `asof` are invisible.
+        Verified historical vintages use publication_ts. Comtrade snapshots
+        and rows flagged publication_time_unknown use the later of retrieval
+        and publication as a conservative availability bound. This also
+        quarantines legacy Comtrade rows carrying the old assumed 23-day lag,
+        without rewriting their provenance. Date-level resolution only.
 
         There is deliberately no `include_latest` or `override` parameter.
         """
         sql = """
-            SELECT o.observation_ts,
-                   o.canonical_value,
-                   o.publication_ts,
-                   o.revision_number,
-                   o.unit,
-                   o.license_class
-              FROM observations o
-             WHERE o.canonical_series_id = :sid
-               AND o.publication_ts <= :asof
-               AND (:cid IS NULL OR o.channel_id = :cid)
-               AND o.publication_ts = (
-                     SELECT MAX(i.publication_ts)
-                       FROM observations i
-                      WHERE i.canonical_series_id = o.canonical_series_id
-                        AND i.observation_ts      = o.observation_ts
-                        AND IFNULL(i.channel_id,'') = IFNULL(o.channel_id,'')
-                        AND i.publication_ts     <= :asof
-                   )
-             ORDER BY o.observation_ts
+            WITH availability AS (
+                SELECT rowid AS ingestion_order, *,
+                       CASE WHEN source_url LIKE '%comtradeapi.un.org/%'
+                                  OR quality_flags LIKE '%publication_time_unknown%'
+                                  OR quality_flags LIKE '%comtrade_free_tier%'
+                            THEN MAX(publication_ts, retrieval_ts)
+                            ELSE publication_ts END AS available_ts
+                  FROM observations
+                 WHERE canonical_series_id = :sid
+                   AND (:cid IS NULL OR channel_id = :cid)
+            ), ranked AS (
+                SELECT *, ROW_NUMBER() OVER (
+                    PARTITION BY observation_ts, channel_id
+                    ORDER BY available_ts DESC, publication_ts DESC,
+                             revision_number DESC, ingestion_order DESC
+                ) AS rank
+                  FROM availability
+                 WHERE available_ts <= :asof
+            )
+            SELECT observation_ts, canonical_value, publication_ts,
+                   revision_number, unit, license_class, available_ts,
+                   retrieval_ts, quality_flags
+              FROM ranked WHERE rank = 1
+             ORDER BY observation_ts
         """
         df = pd.read_sql_query(
             sql,
             self.conn,
             params={"sid": series_id, "asof": asof.isoformat(), "cid": channel_id},
-            parse_dates=["observation_ts", "publication_ts"],
+            parse_dates=["observation_ts", "publication_ts", "available_ts", "retrieval_ts"],
         )
 
         # Belt and braces: the guarantee is asserted, not just intended.
-        if not df.empty and (df["publication_ts"].dt.date > asof).any():
+        if not df.empty and (df["available_ts"].dt.date > asof).any():
             raise LookAheadError(
                 f"as_of({series_id!r}, {asof}) returned a row published later"
             )
@@ -233,14 +257,18 @@ class PITStore:
         return df
 
     def publication_lag(self, series_id: str) -> pd.Series:
-        """Empirical publication lag distribution.
+        """Publication lag distribution for rows with verified release metadata.
 
-        Real-time exercises use this rather than assuming a uniform delay.
+        Excludes retrieval-bounded Comtrade/unknown-publication snapshots;
+        their acquisition delay is not a measured statistical release lag.
         """
         df = pd.read_sql_query(
             """SELECT observation_ts, MIN(publication_ts) AS first_pub
-                 FROM observations
+                FROM observations
                 WHERE canonical_series_id = ?
+                  AND COALESCE(source_url, '') NOT LIKE '%comtradeapi.un.org/%'
+                  AND COALESCE(quality_flags, '') NOT LIKE '%publication_time_unknown%'
+                  AND COALESCE(quality_flags, '') NOT LIKE '%comtrade_free_tier%'
                 GROUP BY observation_ts""",
             self.conn,
             params=(series_id,),

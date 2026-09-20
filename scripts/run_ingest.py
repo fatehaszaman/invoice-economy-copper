@@ -26,9 +26,8 @@ from warehouse.pit import Observation, PITStore
 
 DEFAULT_DB = Path(__file__).resolve().parent.parent / "warehouse" / "data" / "pit_store.db"
 
-# Comtrade free-tier availability caps at 2024-12 (verified via getDA at
-# build time; see ingest/comtrade.py docstring). Fetching further back than
-# needed just burns rate-limit budget for no analytical benefit here.
+# Last month covered by the archived build, NOT a universal API entitlement
+# limit. This default request range does not automatically discover updates.
 COMTRADE_LATEST_AVAILABLE = (2024, 12)
 
 
@@ -63,7 +62,10 @@ def _rows_to_observations(rows: list[dict], retrieval_ts: date) -> list[Observat
                 payload_hash=r.get("payload_hash"),
                 license_class=r.get("license_class", "public"),
                 quality_flags=r.get("quality_flags"),
-                vintage_id=f"{r['publication_ts'].isoformat()}#0",
+                vintage_id=(
+                    f"{r['publication_ts'].isoformat()}#"
+                    f"{r.get('payload_hash') or '0'}"
+                ),
             )
         )
     return obs
@@ -75,14 +77,8 @@ def main() -> int:
     ap.add_argument(
         "--comtrade-months",
         type=int,
-        default=120,
-        help=(
-            "months of Comtrade history. 120 (10y) is the default because the "
-            "rolling-z standardisation window needs >=63 monthly observations "
-            "before net_refined_imports produces a single non-NaN value "
-            "(min_periods = max(20, window // 4), window=252 configured for "
-            "daily series but applied literally here) — see README."
-        ),
+        default=36,
+        help="months of descriptive trade history; does not resolve mixed-frequency scoring",
     )
     ap.add_argument("--db", type=Path, default=DEFAULT_DB)
     args = ap.parse_args()
@@ -111,7 +107,7 @@ def main() -> int:
     report["comtrade"] = (
         f"OK — {len(comtrade_rows)} observations (refined_copper_trade_m/x), "
         f"stale beyond {COMTRADE_LATEST_AVAILABLE[0]}-{COMTRADE_LATEST_AVAILABLE[1]:02d} "
-        "(free-tier cap; does not cover the April 2026 event window)"
+        "(fixed request range; does not cover the April 2026 event window)"
     )
 
     # --------------------------------------------------------- NBS (blocked)
