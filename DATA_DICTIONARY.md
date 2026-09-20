@@ -91,7 +91,7 @@ category error, and the comparison is refused rather than adjusted silently.
 | VAT-inclusive vs exclusive prices | Treated as distinct series, never mixed |
 | Bonded vs onshore stocks | Distinct states; never summed |
 | Licensed LME history absent | Documented SHFE-only fallback; affected results labelled |
-| Source schema drift | Weekly CI run fails loudly rather than producing a wrong number |
+| Source schema drift | Not monitored live; scheduled CI runs offline tests only |
 | Cross-source disagreement | Flagged with both values preserved; never auto-reconciled |
 | Missing import/export leg | Net imports missing; reported zero is retained, never inferred |
 | Unknown Comtrade release/vintage | Retrieval-bounded; historical PIT claim withheld |

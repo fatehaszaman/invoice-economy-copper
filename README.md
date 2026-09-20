@@ -133,6 +133,23 @@ make realtime      # intentionally refuses the unresolved original mixed-frequen
 
 Do not regenerate `pcs.lock` as a routine run step. Original config and lock are preserved; lock tests operate on temporary files. `make robustness` and `make report` intentionally fail because empirical validation and findings are unavailable. `make monthly` neither obtains a channel-level panel nor resolves licensed-data gaps.
 
+## Reviewer guide
+
+Read the status and methodology corrections above before interpreting any
+output. Two technical documents describe the implementation without claiming
+the missing empirical work is complete:
+
+- [Development lifecycle and release criteria](docs/SDLC.md): change process,
+  verification commands, test-to-requirement map, CI boundaries, and outstanding
+  research and operational risks.
+- [Algorithms and data contracts](docs/ALGORITHMS.md): pipeline boundaries,
+  as-of selection, missing-leg handling, monthly construction, normalization,
+  coverage, and sensitivity pseudocode.
+
+In particular, source-failure reporting and the confounder/placebo diagnostics
+need further hardening. The current test suite is evidence about specific
+behaviors, not a certification of the full research design.
+
 ## Layout
 
 ```

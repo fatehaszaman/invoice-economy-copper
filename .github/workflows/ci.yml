@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
   schedule:
-    # Source schema drift should surface as a failing build, not a wrong number.
+    # Scheduled offline regression only; this does not probe live source schemas.
     - cron: "0 6 * * 1"
 
 jobs:
@@ -19,9 +19,11 @@ jobs:
           python-version: "3.11"
       - run: pip install -e ".[dev]"
       - name: lint
-        run: ruff check .
+        run: make lint
       - name: tests
-        run: pytest tests -q
+        run: make test
+      - name: verify original specification lock
+        run: python -c "from pcs.lock import verify_lock; verify_lock()"
       - name: pre-registration ordering
         run: |
           PRE=$(git log --diff-filter=A --format=%ct -- PREREGISTRATION.md | tail -1)
