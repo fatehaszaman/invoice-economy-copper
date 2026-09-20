@@ -60,3 +60,16 @@ withdrawn. The supportable statement is that this build has not identified
 or ingested a suitable panel. Lack of coverage is inconclusive, not a null
 effect. The earlier daily-grid coverage counts are not validation evidence
 for the corrected monthly method.
+
+## Public interpretation clarified 2026-09-20
+
+The score formula and frozen specification have not changed. Current documentation
+describes the sign as a difference of standardized block averages rather than
+proof of physical corroboration. A positive score can occur when both block
+averages are negative, and similar averages can conceal offsetting inputs.
+The original economic interpretation remains a hypothesis requiring validation.
+
+The repository description no longer claims completed validation against the
+China invoice-enforcement episode. The README separates a reproducible synthetic
+demonstration from the incomplete live-data study; detailed source limitations
+and candidate event design are retained in `docs/RESEARCH_CONTEXT.md`.

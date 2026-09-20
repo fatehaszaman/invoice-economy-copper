@@ -1,12 +1,10 @@
 """PCS = mean_z(physical) - mean_z(commercial).
 
-Sign convention, fixed in PREREGISTRATION.md before any estimation:
-NEGATIVE means commercial activity is running ahead of its physical
-corroboration. That is the condition of interest.
-
-It does not mean fraud, fake demand, or financing. It means the commercial
-signal cannot currently be reconciled with independent physical evidence.
-The research layer asks why; the indicator does not assert a cause.
+The original sign convention is retained: a negative value means the
+standardized commercial-block average exceeds the physical-block average.
+It does not establish physical corroboration, causality, fraud, financing
+or predictive power. Economic interpretation remains a research hypothesis;
+similar block averages can conceal offsetting individual series.
 """
 from __future__ import annotations
 

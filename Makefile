@@ -47,15 +47,15 @@ pcs:  ## original specification (refuses unresolved mixed-frequency scoring)
 # The pre-registration guarantee is a BUILD DEPENDENCY, not a promise.
 # This target refuses to run if the instrument definition drifted after
 # PREREGISTRATION.md was committed.
-estimate:  ## exposure design, monotonicity, inference (synthetic until ingestion lands)
+estimate:  ## synthetic estimator demonstration, not empirical validation
 	@$(PY) -c "from pcs.lock import verify_lock; verify_lock(); print('lock verified: instrument unchanged since pre-registration')"
 	$(PY) -m scripts.run_research
 
 robustness:  ## pre-trends, placebos, confounder ladder, spec grid
 	@echo "Structural modules implemented: research/placebos.py, research/confounders.py, pcs/sensitivity.py."
 	@echo "Validated against the synthetic panel (tests/unit/test_placebos.py, test_confounders.py, test_sensitivity.py)."
-	@echo "Cannot run on real copper data yet: no public source publishes a per-channel,"
-	@echo "invoice-exposure-tiered outcome panel at the intermediary granularity this design needs."
+	@echo "A usable real channel-level outcome/exposure panel has not been ingested."
+	@echo "This is a data gap in this build, not proof that no suitable source exists."
 	@echo "See README \"Live ingestion status\" and \"Open research gap\"."
 	@exit 1
 

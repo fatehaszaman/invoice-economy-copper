@@ -1,9 +1,9 @@
-"""Run the full estimation and inference sequence.
+"""Run the implemented synthetic estimator and inference demonstration.
 
-Until live ingestion lands, this runs against the SYNTHETIC panel and says so
-on every line of output. Its purpose today is to demonstrate that the
-estimator recovers a known effect and declines to invent one — not to report
-a finding about copper.
+Partial aggregate ingestion does not supply the required real channel panel.
+This command uses SYNTHETIC data and labels each example explicitly. Regression
+assertions live in the test suite; this demonstration is not a research-validity
+gate and does not report a finding about copper.
 """
 from __future__ import annotations
 
@@ -53,6 +53,6 @@ if __name__ == "__main__":
     run(-1.0, "recovery check")
     run(0.0, "null check — must NOT find an effect")
     print(f"\n{BANNER}")
-    print("No copper finding is reported. FINDINGS.md is written only after live "
-          "ingestion completes.")
+    print("No copper finding is reported. Empirical analysis requires a validated "
+          "real channel-level panel and reviewed identification assumptions.")
     sys.exit(0)
