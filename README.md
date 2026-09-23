@@ -21,11 +21,14 @@ outputs, time/space bounds, implementation link and an edge case.
 
 ## Why this project
 
-I chose copper because my work around copper, aluminium and cable manufacturing
-made the distinction between material consumption and transaction activity a
-concrete research question. This project asks whether independently acquired
-data can help examine that distinction without using employer information or
-treating an economic hypothesis as an established result.
+I started in software engineering, and I built this project to learn about the
+Chinese metals market, where I did not have direct experience. My work around
+copper, aluminium and cable manufacturing gave me a reason to ask how material
+consumption differs from transaction activity, but I did not want to assume that
+experience elsewhere translated into an understanding of China. This project uses
+independently acquired data and reproducible software to investigate that question
+without using employer information or treating the hypothesis as an established
+result.
 
 The engineering goal is to make the evidence behind a calculation inspectable.
 A plausible-looking score is not enough if its inputs include later revisions,
