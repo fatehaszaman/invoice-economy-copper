@@ -162,6 +162,29 @@ coverage; successful acquisition or hash checks do not establish enough data for
 a research conclusion. The monthly output is snapshot history at one as-of
 date, not a sequence of historically tradable signals.
 
+### Explicit trade-request periods and failures
+
+The default remains 36 months ending in December 2024 for compatibility.
+To choose a different inclusive ending month, run:
+
+```bash
+python -m scripts.run_ingest --comtrade-months 12 --comtrade-end 2025-12
+```
+
+This changes the requested Comtrade period, not the provider's available coverage;
+the command still runs the other configured source adapters. The run prints the
+requested range and separates requests with data, valid empty responses, incomplete
+responses (rows skipped for missing net weight), and failed requests. Non-data
+outcomes include the month and import/export direction; failures include a reason.
+The collector also exposes these structured outcomes in `request_results`.
+
+Successfully parsed observations are retained. Failed or incomplete Comtrade
+requests produce a `PARTIAL` or `FAILED` summary and exit code 1. Valid empty
+responses are not request failures and do not imply a measured zero; an entirely
+empty successful run is labeled `NO_DATA`. Exit code 0 does not certify complete
+coverage or historical vintages. These changes do not modify the other adapters'
+failure handling or the research specification.
+
 ## Open research gap
 
 The current data do not support an empirical channel-level exposure study.

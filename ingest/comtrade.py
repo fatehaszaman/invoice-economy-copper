@@ -16,7 +16,9 @@ cannot reconstruct what was known in the event window.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import date
+from urllib.parse import parse_qs, urlsplit
 
 from .base import Fetcher
 
@@ -25,6 +27,20 @@ REPORTER_CHINA = 156
 PARTNER_WORLD = 0
 HS_REFINED_COPPER = "7403"  # unwrought refined copper and copper alloys
 KG_PER_TONNE = 1000.0
+
+
+@dataclass(frozen=True)
+class ComtradeRequestResult:
+    """One request outcome; EMPTY means a valid response with an empty data list."""
+
+    period: str
+    flow: str
+    url: str
+    status: str
+    observation_count: int = 0
+    skipped_rows: int = 0
+    error: str | None = None
+
 
 class ComtradeCopperFetcher(Fetcher):
     """Monthly China refined-copper (HS 7403) import/export volumes.
@@ -43,6 +59,7 @@ class ComtradeCopperFetcher(Fetcher):
         # For offline replay, this must be the archived payload's retrieval
         # date, never the historical period or an assumed release lag.
         self.retrieved_on = retrieved_on or date.today()
+        self.request_results: list[ComtradeRequestResult] = []
 
     def endpoints(self) -> list[str]:
         urls = []
@@ -57,9 +74,13 @@ class ComtradeCopperFetcher(Fetcher):
 
     def parse(self, payload: bytes, url: str) -> list[dict]:
         obj = json.loads(payload.decode("utf-8"))
-        rows = obj.get("data", [])
+        if not isinstance(obj, dict) or not isinstance(obj.get("data"), list):
+            raise ValueError("Expected a Comtrade response with a data list")
+        rows = obj["data"]
         out = []
         for r in rows:
+            if not isinstance(r, dict):
+                raise ValueError("Expected each Comtrade data row to be an object")
             period = str(r["period"])
             obs_year, obs_month = int(period[:4]), int(period[4:6])
             # observation_ts: last day of the reference month.
@@ -116,15 +137,32 @@ class ComtradeCopperFetcher(Fetcher):
         import time
 
         out: list[dict] = []
+        self.request_results = []
         for url in self.endpoints():
+            query = parse_qs(urlsplit(url).query)
+            period, flow = query["period"][0], query["flowCode"][0]
             try:
                 payload = self.fetch_with_retry(url, attempts=4, base_delay=2.0)
-            except RuntimeError:
-                continue
-            digest = self.store_raw(payload, url)
-            rows = self.parse(payload, url)
-            for r in rows:
-                r["payload_hash"] = digest
-            out.extend(rows)
-            time.sleep(1.5)
+                digest = self.store_raw(payload, url)
+                rows = self.parse(payload, url)
+                response_rows = len(json.loads(payload.decode("utf-8"))["data"])
+                skipped = response_rows - len(rows)
+                status = "INCOMPLETE" if skipped else ("DATA" if rows else "EMPTY")
+                self.request_results.append(ComtradeRequestResult(
+                    period=period, flow=flow, url=url, status=status,
+                    observation_count=len(rows), skipped_rows=skipped,
+                    error="Rows without net weight were skipped" if skipped else None,
+                ))
+                for r in rows:
+                    r["payload_hash"] = digest
+                out.extend(rows)
+            except (RuntimeError, OSError, ValueError, TypeError, KeyError) as exc:
+                cause = exc.__cause__ or exc
+                self.request_results.append(ComtradeRequestResult(
+                    period=period, flow=flow, url=url, status="FAILED",
+                    error=f"{type(cause).__name__}: {cause}",
+                ))
+            finally:
+                # Preserve pacing after failures as well as successful requests.
+                time.sleep(1.5)
         return out
