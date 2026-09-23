@@ -223,11 +223,10 @@ offline quickstart.
 
 ## Author and motivation
 
-Fateha Zaman. My quantitative-development work at MRS Industries and engineering
-work at BRB Cable Industries put me close to copper, aluminium and cable
-manufacturing. The distinction between material consumption and transaction
-activity motivates the question; professional context is not evidence for the
-proposed statistical interpretation.
+Fateha Zaman. I built this independent project to learn about the Chinese metals
+market through software engineering and data research. The distinction between
+material consumption and transaction activity motivates the question; the project
+does not claim established regional expertise or a validated economic result.
 
 No employer data, prices, volumes, counterparties or internal figures are
 included. The project uses independently acquired source data and synthetic

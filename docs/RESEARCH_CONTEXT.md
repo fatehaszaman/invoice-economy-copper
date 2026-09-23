@@ -252,6 +252,6 @@ Turnover is **proxied** from public measures. No circulation multiplier or empir
 
 ## Author
 
-Fateha Zaman. Built from the physical consumption side: I started in quantitative development at MRS Industries, working within an existing engineering team, and became the first technical hire at BRB Cable Industries, building its technical infrastructure from zero close to the copper and aluminium and cable-manufacturing side of the business. The cathode-versus-scrap input decision in this analysis is something I have watched get made, not something I inferred from a paper.
+Fateha Zaman. I built this independent project to learn about the Chinese metals market through software engineering and data research. The distinction between material consumption and transaction activity motivates the question; the project does not claim established regional expertise or a validated economic result.
 
 No employer data, prices, volumes, counterparties, or internal figures appear anywhere in this repository. Mechanism knowledge is stated as industry practice.
