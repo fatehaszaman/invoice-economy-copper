@@ -54,7 +54,7 @@ value was historically available; those limits are documented in the
 
 | Component | Evidence | Boundary |
 |---|---|---|
-| Source ingestion | SHFE daily and UN Comtrade monthly adapters; raw payload hashes and acquisition metadata | Partial coverage; skipped requests need better failure reporting |
+| Source ingestion | SHFE daily and UN Comtrade monthly adapters; raw payload hashes and acquisition metadata | Explicit failed/empty/incomplete request reporting (PARTIAL/FAILED/NO_DATA); coverage still partial |
 | Vintage-aware SQLite store | Explicit as-of reads, retained revisions and adversarial look-ahead tests | Enforces supplied metadata; does not authenticate historical release dates |
 | SQL audits and data model | Inventory, revision windows, duplicate-key checks, read-only CLI and ER diagram | Local analytical store, not a deployed cloud warehouse |
 | Monthly exploratory score | Aggregate before transforming; prior-month normalization; explicit missingness and coverage | Provisional specification, not the original preregistered daily study |

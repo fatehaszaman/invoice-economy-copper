@@ -173,5 +173,7 @@ def test_cli_exit_status_and_successful_row_retention(
     if expected_code:
         assert "202412 X:" in output
     store = PITStore(db)
-    assert len(store.as_of("refined_copper_trade_m", date(2026, 9, 23))) == 1
+    # Rows are stamped with the real ingestion time, so query as of today
+    # rather than a fixed date that eventually falls before ingestion.
+    assert len(store.as_of("refined_copper_trade_m", date.today())) == 1
     store.conn.close()
