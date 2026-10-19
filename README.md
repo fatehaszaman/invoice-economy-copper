@@ -42,8 +42,11 @@ The result is a concrete demonstration of Python/SQL research engineering:
 source adapters, data contracts, revision-aware queries, reproducible synthetic
 examples and tests that exercise failure cases. Those design concerns extend
 beyond copper to other datasets with release delays, revisions and incomplete
-coverage. The deliverable is auditable research infrastructure, not a claimed
-trading edge or completed causal study.
+coverage, and the retained vintages and negative empirical findings also serve
+as structured ground truth for testing and training my own LLM-as-a-judge
+evaluators against look-ahead bias and unsupported causal claims. The
+deliverable is auditable research infrastructure, not a claimed trading edge or
+completed causal study.
 
 The archive uses SHA-256 hashing to check byte integrity, not encryption or
 decryption. A matching hash does not authenticate a publisher or prove that a
